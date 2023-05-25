@@ -1,0 +1,39 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "darc_renderer"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "darc_render_bin"
+path = "src/app/main.rs"
+test = true
+bench = true
+
+[dependencies]
+cfg-if="1"
+env_logger = "0.10.0"
+log = "0.4.17"
+wgpu = "0.16.1"
+winit = "0.28.6"
+lazy_static = "1.4.0"
+anyhow = "1.0.71"
+
+[dependencies.async-std]
+version = "1.12"
+features = ["attributes", "unstable", "std"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1.0.0"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "Element",
+]}
