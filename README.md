@@ -1,5 +1,7 @@
 # dArCEngine
 
+[![Bench](https://github.com/DarcJC/dArcEngine/actions/workflows/rust.yml/badge.svg)](https://github.com/DarcJC/dArcEngine/actions/workflows/rust.yml)
+
 ## Introduction
 
 ## Workspace Setup
