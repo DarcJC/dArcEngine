@@ -14,12 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Cache Target
-      id: cache-target
-      uses: actions/cache@v3
-      with:
-        path: target
-        key: ${{ runner.os }}-target
     - name: Restore cached Cargo
       id: cache-cargo-restore
       uses: actions/cache/restore@v3
