@@ -20,11 +20,12 @@ jobs:
       with:
         path: target
         key: ${{ runner.os }}-target
-    - name: Cache Cargo
-      id: cache-cargo
-      uses: actions/cache@v3
+    - name: Restore cached Cargo
+      id: cache-cargo-restore
+      uses: actions/cache/restore@v3
       with:
-        path: /home/runner/.cargo
+        path: |
+          /home/runner/.cargo
         key: ${{ runner.os }}-cargo
     - name: Install latest nightly
       uses: actions-rs/toolchain@v1
@@ -35,7 +36,42 @@ jobs:
         target: wasm32-unknown-unknown
     - name: Install WASM32 Runner
       run: cargo install wasm-server-runner
+    - name: Save Cargo
+      id: cache-cargo-save
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          /home/runner/.cargo
+        key: ${{ runner.os }}-cargo
+    - name: Restore cached target
+      id: cache-target-restore
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          target
+        key: ${{ runner.os }}-target-normal
     - name: Bench
       run: cargo bench --verbose
+    - name: Save target
+      id: cache-target-save
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          target
+        key: ${{ runner.os }}-target-normal
+    - name: Restore cached wasm32 target
+      id: cache-target-wasm32-restore
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          target
+        key: ${{ runner.os }}-target-wasm32
     - name: Bench (wasm32)
-      run: RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test --target wasm32-unknown-unknown --verbose
+      run: RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo test --target wasm32-unknown-unknown --lib --verbose
+    - name: Save wasm32 target
+      id: cache-target-wasm32-save
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          target
+        key: ${{ runner.os }}-target-wasm32
