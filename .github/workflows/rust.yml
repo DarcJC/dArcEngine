@@ -20,6 +20,7 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
+        target: wasm32-unknown-unknown
     - name: Cache Target
       id: cache-target
       uses: actions/cache@v3
