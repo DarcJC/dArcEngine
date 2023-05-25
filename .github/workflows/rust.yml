@@ -29,4 +29,4 @@ jobs:
     - name: Bench
       run: cargo bench --verbose
     - name: Bench (wasm32)
-      run: RUSTFLAGS=--cfg=web_sys_unstable_apis CARGO_TARGET_wasm32-unknown-unknown_RUNNER="none" cargo bench --target wasm32-unknown-unknown --verbose
+      run: RUSTFLAGS="--cfg=web_sys_unstable_apis" CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner cargo bench --target wasm32-unknown-unknown --verbose
