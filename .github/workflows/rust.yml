@@ -14,6 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Cache Target
+      id: cache-target
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-target
+    - name: Cache Cargo
+      id: cache-cargo
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.cargo
+        key: ${{ runner.os }}-cargo
     - name: Install latest nightly
       uses: actions-rs/toolchain@v1
       with:
@@ -21,12 +33,8 @@ jobs:
         override: true
         components: rustfmt, clippy
         target: wasm32-unknown-unknown
-    - name: Cache Target
-      id: cache-target
-      uses: actions/cache@v3
-      with:
-        path: target
-        key: ${{ runner.os }}-target
+    - name: Install WASM32 Runner
+      run: cargo install wasm-server-runner
     - name: Bench
       run: cargo bench --verbose
     - name: Bench (wasm32)
