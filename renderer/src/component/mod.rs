@@ -1,7 +1,10 @@
 use wgpu;
 use wgpu::AdapterInfo;
+use wgpu::util::DeviceExt;
 use winit::event::WindowEvent;
 use winit::window::{Window, WindowId};
+use crate::buffer::common::GPUBuffer;
+use crate::buffer::TRIANGLE_VERTICES;
 
 pub struct GPUComponent {
     pub surface: wgpu::Surface,
@@ -10,6 +13,8 @@ pub struct GPUComponent {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
+    pub vertex_buffer: wgpu::Buffer,
+    pub num_vertices: u32,
 }
 
 pub trait Action {
@@ -65,7 +70,7 @@ impl Action for GPUComponent {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shader/simple_triangle.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shader/simple_index_buffer.wgsl").into()),
         });
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
@@ -78,7 +83,9 @@ impl Action for GPUComponent {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[],
+                buffers: &[
+                    crate::buffer::Vertex::desc(),
+                ],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -106,6 +113,16 @@ impl Action for GPUComponent {
             },
             multiview: None,
         });
+
+        let vertex_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(&crate::buffer::TRIANGLE_VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
+
+        let num_vertices = TRIANGLE_VERTICES.len() as u32;
         Self {
             surface,
             device,
@@ -113,6 +130,8 @@ impl Action for GPUComponent {
             config,
             size,
             render_pipeline,
+            vertex_buffer,
+            num_vertices,
         }
     }
 
@@ -166,7 +185,8 @@ impl Action for GPUComponent {
                 depth_stencil_attachment: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.draw(0..self.num_vertices, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
