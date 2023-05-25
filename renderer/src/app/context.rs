@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use async_std::task::block_on;
+use std::sync::RwLockWriteGuard;
 use bevy_ecs::system::Resource;
 use darc_renderer::component::{Action, GSCHEDULES, GWORLD};
 use winit::{event::{Event, WindowEvent, ElementState, VirtualKeyCode, KeyboardInput}, event_loop::ControlFlow};
@@ -10,17 +10,18 @@ use wasm_bindgen::prelude::*;
 
 /// Context to be passed to the application
 #[derive(Resource)]
-pub(crate) struct ApplicationContext {
+pub(crate) struct ApplicationContext<'a> {
     window_loop: Option<winit::event_loop::EventLoop<()>>,
     window: Option<winit::window::Window>,
     display_component: Option<darc_renderer::component::DisplayComponent>,
+    phantom: std::marker::PhantomData<&'a ()>,
 }
 
-unsafe impl Sync for ApplicationContext {}
-unsafe impl Send for ApplicationContext {}
+unsafe impl<'a> Sync for ApplicationContext<'a> {}
+unsafe impl<'a> Send for ApplicationContext<'a> {}
 
-impl ApplicationContext {
-    pub(crate) async fn new() -> ApplicationContext {
+impl<'a> ApplicationContext<'a> {
+    pub(crate) fn new() -> ApplicationContext<'a> {
         let window_loop = winit::event_loop::EventLoop::new();
         let window = winit::window::WindowBuilder::new()
             .with_title("dArCEngine")
@@ -30,46 +31,51 @@ impl ApplicationContext {
             window_loop: Some(window_loop),
             window: Some(window),
             display_component: None,
+            phantom: std::marker::PhantomData,
         }
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub async fn initialize(&mut self) {
-        let window = &mut self.window;
+    pub async fn initialize(mut lock: RwLockWriteGuard<'static, Self>) {
+        // add canvas and then initialize gpu component with canvas handle
+        use winit::dpi::PhysicalSize;
+        use winit::platform::web::WindowExtWebSys;
 
-        wasm_bindgen_futures::spawn_local(async move {
-            // add canvas and then initialize gpu component with canvas handle
-            use winit::dpi::PhysicalSize;
-            use winit::platform::web::WindowExtWebSys;
-            web_sys::window()
-                .and_then(|win| win.document())
-                .map(|doc| {
-                    match doc.get_element_by_id("wasm-renderer") {
-                        Some(dst) => {
-                            window.set_inner_size(PhysicalSize::new(450, 400));
-                            let _ = dst.append_child(&web_sys::Element::from(window.canvas()));
-                        }
-                        None => {
-                            window.set_inner_size(PhysicalSize::new(800, 800));
-                            let canvas = window.canvas();
-                            canvas.style().set_css_text(
-                                "background-color: black; display: block; margin: 20px auto;",
-                            );
-                            doc.body()
-                                .map(|body| body.append_child(&web_sys::Element::from(canvas)));
-                        }
-                    };
-                })
-                .expect("Couldn't append canvas to document body.");
-        });
+        let window = lock.window.as_mut().unwrap();
+        web_sys::window()
+            .and_then(|win| win.document())
+            .map(|doc| {
+                match doc.get_element_by_id("wasm-renderer") {
+                    Some(dst) => {
+                        window.set_inner_size(PhysicalSize::new(450, 400));
+                        let _ = dst.append_child(&web_sys::Element::from(window.canvas()));
+                    }
+                    None => {
+                        window.set_inner_size(PhysicalSize::new(800, 800));
+                        let canvas = window.canvas();
+                        canvas.style().set_css_text(
+                            "background-color: black; display: block; margin: 20px auto;",
+                        );
+                        doc.body()
+                            .map(|body| body.append_child(&web_sys::Element::from(canvas)));
+                    }
+                };
+            })
+            .expect("Couldn't append canvas to document body.");
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn run(&mut self) {
+    pub async fn run(mut lock: RwLockWriteGuard<'static, Self>) {
         use async_std::task::block_on;
 
+        if lock.display_component.is_none() {
+            lock.display_component = Some(darc_renderer::component::DisplayComponent::new(lock.window.as_mut().unwrap()).await);
+        }
+
         let run_closure =
-            Closure::once_into_js(move || self.event_loop());
+            Closure::once_into_js(move || {
+                block_on(ApplicationContext::event_loop(lock));
+            });
 
         // Handle js exceptions.
         // Otherwise the event loop will be stopped.
@@ -93,22 +99,19 @@ impl ApplicationContext {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn initialize(&mut self) {
-        self.display_component = Some(darc_renderer::component::DisplayComponent::new(self.window.as_mut().unwrap()).await);
+    pub async fn initialize(mut lock: RwLockWriteGuard<'static, Self>) {
+        lock.display_component = Some(darc_renderer::component::DisplayComponent::new(lock.window.as_mut().unwrap()).await);
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run(&mut self) {
-        self.event_loop()
+    pub async fn run(lock: RwLockWriteGuard<'static, Self>) {
+        ApplicationContext::event_loop(lock).await
     }
 
-    pub fn event_loop(&mut self) {
-        if self.display_component.is_none() {
-            self.display_component = Some(block_on(darc_renderer::component::DisplayComponent::new(self.window.as_mut().unwrap())));
-        }
-        let mut display_component = self.display_component.take().unwrap();
-        let window_loop = self.window_loop.take().unwrap();
-        let window = self.window.take().unwrap();
+    pub async fn event_loop(mut lock: RwLockWriteGuard<'static, Self>) {
+        let mut display_component = lock.display_component.take().unwrap();
+        let window_loop = lock.window_loop.take().unwrap();
+        let window = lock.window.take().unwrap();
         window_loop.run(
             move |event, _, control_flow| {
                 match event {
@@ -144,9 +147,9 @@ impl ApplicationContext {
                     Event::MainEventsCleared => {
                         window.request_redraw();
                         // continue to process the game logic at the meantime
-                        let mut world_lock = block_on(GWORLD.write());
+                        let mut world_lock = GWORLD.write().unwrap();
                         let world = world_lock.deref_mut();
-                        let mut schedules_lock = block_on(GSCHEDULES.write());
+                        let mut schedules_lock = GSCHEDULES.write().unwrap();
                         let schedules = schedules_lock.deref_mut();
                         schedules.run(world);
                     },

@@ -1,4 +1,4 @@
-use async_std::sync::RwLock;
+use std::sync::RwLock;
 use bevy_ecs::schedule::Schedule;
 use bevy_ecs::world::World;
 use lazy_static::lazy_static;

@@ -1,35 +1,38 @@
 pub mod context;
-
+pub mod stat;
 
 use std::sync::RwLock;
 
-use async_std::task::block_on;
 use bevy_ecs::{world::World};
 use context::ApplicationContext;
-use darc_renderer::component::{GWORLD, GSCHEDULES};
+use darc_renderer::component::{GSCHEDULES};
 use lazy_static::lazy_static;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 lazy_static! {
-    static ref APPLICATION_CONTEXT: RwLock<ApplicationContext> = RwLock::new(block_on(ApplicationContext::new()));
+    static ref APPLICATION_CONTEXT: RwLock<ApplicationContext<'static>> = RwLock::new(ApplicationContext::new());
 }
 
 #[async_std::main]
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 async fn main() {
+    start().await;
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
+async fn start() {
     initialize_world().await;
-    let mut schedule = GSCHEDULES.write().await;
+    let mut schedule = GSCHEDULES.write().unwrap();
     schedule.add_system(main_loop_system);
     drop(schedule);
 
-    APPLICATION_CONTEXT.write().unwrap().run();
+    ApplicationContext::run(APPLICATION_CONTEXT.write().unwrap()).await;
 }
 
 async fn initialize_world() {
     initialize_logger();
-    APPLICATION_CONTEXT.write().unwrap().initialize().await;
+    ApplicationContext::initialize(APPLICATION_CONTEXT.write().unwrap()).await;
 }
 
 fn initialize_logger() {
@@ -44,4 +47,7 @@ fn initialize_logger() {
 }
 
 fn main_loop_system(_world: &mut World) {
+    print!("\x1b[2J");
+    print!("\x1b[H");
+    println!("");
 }
