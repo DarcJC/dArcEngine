@@ -28,3 +28,5 @@ jobs:
         key: ${{ runner.os }}-target
     - name: Bench
       run: cargo bench --verbose
+    - name: Bench (wasm32)
+      run: RUSTFLAGS=--cfg=web_sys_unstable_apis CARGO_TARGET_wasm32-unknown-unknown_RUNNER="none" cargo bench --target wasm32-unknown-unknown --verbose
