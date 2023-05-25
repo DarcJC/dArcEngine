@@ -1,3 +1,7 @@
+use async_std::sync::RwLock;
+use bevy_ecs::schedule::Schedule;
+use bevy_ecs::world::World;
+use lazy_static::lazy_static;
 use wgpu;
 use wgpu::AdapterInfo;
 use wgpu::util::DeviceExt;
@@ -6,10 +10,25 @@ use winit::window::{Window, WindowId};
 use crate::buffer::common::GPUBuffer;
 use crate::buffer::TRIANGLE_VERTICES;
 
-pub struct GPUComponent {
+lazy_static! {
+    pub static ref GWORLD: RwLock<World> = RwLock::new(create_world());
+    pub static ref GSCHEDULES: RwLock<Schedule> = RwLock::new(create_schedule());
+}
+
+fn create_world() -> World {
+    let world = World::default();
+    world
+}
+
+fn create_schedule() -> Schedule {
+    let schedule = Schedule::default();
+    schedule
+}
+
+pub struct DisplayComponent {
     pub surface: wgpu::Surface,
     pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub queue: wgpu::Queue, 
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
@@ -30,7 +49,7 @@ pub trait Action {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError>;
 }
 
-impl Action for GPUComponent {
+impl Action for DisplayComponent {
     async fn new(window: &Window) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
