@@ -11,9 +11,10 @@
 <body id="wasm-renderer">
 <script type="module">
     import init from "./darc_renderer.js";
-    init().then(() => {
+    (async () => {
+        await init();
         console.log("WASM Loaded");
-    });
+    })();
 </script>
 
 <style>

@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use wgpu;
 use wgpu::AdapterInfo;
 use winit::event::WindowEvent;
@@ -16,7 +15,7 @@ pub trait Action {
     async fn new(window: &Window) -> Self;
     fn get_adapter_info(&self) -> AdapterInfo;
     fn current_window_id(&self) -> WindowId;
-    fn resize(&mut self);
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>);
     fn request_redraw(&mut self);
     fn input(&mut self, _event: &WindowEvent) -> bool {
         false
@@ -79,8 +78,13 @@ impl Action for GPUComponent {
         todo!()
     }
 
-    fn resize(&mut self) {
-        todo!();
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.size = new_size;
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+            self.surface.configure(&self.device, &self.config);
+        }
     }
 
     fn request_redraw(&mut self) {
@@ -88,14 +92,41 @@ impl Action for GPUComponent {
     }
 
     fn input(&mut self, _event: &WindowEvent) -> bool {
-        todo!()
+        false
     }
 
     fn update(&mut self) {
-        todo!()
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        todo!()
+        let output = self.surface.get_current_texture()?;
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        {
+            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
     }
 }
