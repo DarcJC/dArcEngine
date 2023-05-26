@@ -1,3 +1,6 @@
+pub mod primitive;
+pub mod pipeline;
+
 use std::sync::RwLock;
 use bevy_ecs::schedule::Schedule;
 use bevy_ecs::world::World;
@@ -7,8 +10,10 @@ use wgpu::AdapterInfo;
 use wgpu::util::DeviceExt;
 use winit::event::WindowEvent;
 use winit::window::{Window, WindowId};
-use crate::buffer::common::GPUBuffer;
+use crate::buffer::common::VertexBuffer;
 use crate::buffer::TRIANGLE_VERTICES;
+pub use primitive::*;
+pub use pipeline::*;
 
 lazy_static! {
     pub static ref GWORLD: RwLock<World> = RwLock::new(create_world());
@@ -37,7 +42,6 @@ pub struct DisplayComponent {
 }
 
 pub trait Action {
-    async fn new(window: &Window) -> Self;
     fn get_adapter_info(&self) -> AdapterInfo;
     fn current_window_id(&self) -> WindowId;
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>);
@@ -49,8 +53,8 @@ pub trait Action {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError>;
 }
 
-impl Action for DisplayComponent {
-    async fn new(window: &Window) -> Self {
+impl DisplayComponent {
+    pub async fn new(window: &Window) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
@@ -154,6 +158,9 @@ impl Action for DisplayComponent {
         }
     }
 
+}
+
+impl Action for DisplayComponent {
     fn get_adapter_info(&self) -> AdapterInfo {
         todo!()
     }

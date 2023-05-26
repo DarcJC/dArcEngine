@@ -1,5 +1,5 @@
 use wgpu::VertexBufferLayout;
-use crate::buffer::common::GPUBuffer;
+use crate::buffer::common::VertexBuffer;
 
 pub mod common;
 
@@ -10,7 +10,7 @@ pub struct Vertex {
     pub color: [f32; 3],
 }
 
-impl GPUBuffer for Vertex {
+impl VertexBuffer for Vertex {
     fn desc<'a>() -> VertexBufferLayout<'a> {
         VertexBufferLayout {
             array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
