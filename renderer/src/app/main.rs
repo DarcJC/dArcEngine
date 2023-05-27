@@ -1,19 +1,11 @@
 pub mod context;
 pub mod stat;
 
-use std::sync::RwLock;
-
 use bevy_ecs::{world::World};
-use context::ApplicationContext;
-use darc_renderer::component::{GSCHEDULES, GWORLD};
-use lazy_static::lazy_static;
+use darc_renderer::{component::{GSCHEDULES, GWORLD}, window::{APPLICATION_CONTEXT, ApplicationContext}};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
-lazy_static! {
-    static ref APPLICATION_CONTEXT: RwLock<ApplicationContext<'static>> = RwLock::new(ApplicationContext::new());
-}
 
 #[async_std::main]
 async fn main() {

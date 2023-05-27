@@ -14,7 +14,8 @@
 
 1. `cargo install wasm-server-runner`
 2. `rustup target add wasm32-unknown-unknown`
-3. `cargo run --target wasm32-unknown-unknown`
+3. Export `RUSTFLAGS` environment variable. `$env:RUSTFLAGS="--cfg=web_sys_unstable_apis"`
+4. `cargo run --target wasm32-unknown-unknown`
 
 Ignore below for now.
 
