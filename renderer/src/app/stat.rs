@@ -1,12 +1,12 @@
 use std::time::{SystemTime, Duration};
-use bevy_ecs::system::{Resource, ResMut};
+use bevy::prelude::{Resource, ResMut, Plugin};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]
-pub struct PerformanceStat {
+struct PerformanceStat {
     pub current_frame: u64,
     pub last_frame_time: f64,
 }
@@ -29,7 +29,7 @@ impl PerformanceStat {
     }
 }
 
-pub fn fps_stat_system(mut stat: ResMut<PerformanceStat>) {
+fn fps_stat_system(mut stat: ResMut<PerformanceStat>) {
     if let Ok(duration) = stat.tick() {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -62,4 +62,15 @@ fn performance_now() -> f64 {
     use std::time::UNIX_EPOCH;
 
     SystemTime::now().duration_since(UNIX_EPOCH).expect("Could not get system time.").as_micros() as f64
+}
+
+pub struct PerformenceStatPlugin;
+
+impl Plugin for PerformenceStatPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app
+        .init_resource::<PerformanceStat>()
+        .add_system(fps_stat_system)
+        ;
+    }
 }

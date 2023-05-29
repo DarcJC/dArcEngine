@@ -1,8 +1,6 @@
-pub mod context;
 pub mod stat;
 
-use bevy_ecs::{world::World};
-use darc_renderer::{component::{GSCHEDULES, GWORLD}, window::{APPLICATION_CONTEXT, ApplicationContext}};
+use bevy::{prelude::*, DefaultPlugins, render::{RenderPlugin, settings::WgpuSettings}};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -15,20 +13,21 @@ async fn main() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 async fn start() {
     initialize_world().await;
-    let mut schedule = GSCHEDULES.write().unwrap();
-    schedule.add_system(main_loop_system);
-    schedule.add_system(stat::fps_stat_system);
-    drop(schedule);
-
-    ApplicationContext::run(APPLICATION_CONTEXT.write().unwrap()).await;
+    App::default()
+        .add_plugins(DefaultPlugins.set(RenderPlugin {
+            wgpu_settings: WgpuSettings {
+                backends: None,
+                ..default()
+            },
+        }))
+        .add_system(main_loop_system)
+        // .add_plugin(PerformenceStatPlugin)
+        .add_plugin(darc_renderer::render::RenderPlugin)
+        .run();
 }
 
 async fn initialize_world() {
-    let mut world = GWORLD.write().unwrap();
-    world.init_resource::<stat::PerformanceStat>();
-
     initialize_logger();
-    ApplicationContext::initialize(APPLICATION_CONTEXT.write().unwrap()).await;
 }
 
 fn initialize_logger() {

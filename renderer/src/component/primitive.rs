@@ -1,7 +1,7 @@
 use std::ops::{DerefMut, Deref};
 use std::str::FromStr;
 use std::sync::RwLock;
-use bevy_ecs::prelude::Component;
+use bevy::prelude::Component;
 use nalgebra::{Vector4, Rotation3, Scale4};
 
 
