@@ -65,6 +65,7 @@ impl Plugin for RenderPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
         .add_startup_system(graph_interface_context_setup)
+        .add_system(render_system)
         ;
     }
 }
@@ -96,4 +97,41 @@ fn graph_interface_context_setup(world: &mut World) {
         let context = GraphInterfaceContext { surface, config };
         graph_res.contexts.insert(*window_id, context);
     });
+}
+
+fn render_system(world: &mut World) {
+    let mut render_state: SystemState<(
+        NonSendMut<GraphInterfaceResource>,
+    )> = SystemState::from_world(world);
+
+    let (graph_res,) = render_state.get_mut(world);
+    let mut frames = Vec::new();
+
+    let mut encoder = graph_res.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render Encoder") });
+    graph_res.contexts.iter().for_each(|(_window_id, context)| {
+        let frame = context.surface.get_current_texture().unwrap();
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        {
+            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                            store: true,
+                        },
+                    })
+                ],
+                depth_stencil_attachment: None,
+            });
+        }
+        frames.push(frame);
+    });
+    graph_res.queue.submit(Some(encoder.finish()));
+
+    for frame in frames {
+        frame.present();
+    }
 }
